@@ -68,6 +68,11 @@ NSString* UITraitsClassString;
 
     NSDictionary *settings = self.commandDelegate.settings;
 
+    BOOL isWK = self.isWK = [self.webView isKindOfClass:NSClassFromString(@"WKWebView")];
+    if (!isWK) {
+        NSLog(@"CDVIonicKeyboard: WARNING!!: Keyboard plugin works better with WK");
+    }
+
     self.disableScroll = ![settings cordovaBoolSettingForKey:@"ScrollEnabled" defaultValue:NO];
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(statusBarDidChangeFrame:) name: UIApplicationDidChangeStatusBarFrameNotification object:nil];
@@ -106,19 +111,6 @@ NSString* UITraitsClassString;
     [nc addObserver:self selector:@selector(onKeyboardDidHide:) name:UIKeyboardDidHideNotification object:nil];
     [nc addObserver:self selector:@selector(onKeyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
     [nc addObserver:self selector:@selector(onKeyboardDidShow:) name:UIKeyboardDidShowNotification object:nil];
-
-    // Prevent WKWebView to resize window
-    BOOL isWK = self.isWK = [self.webView isKindOfClass:NSClassFromString(@"WKWebView")];
-    if (!isWK) {
-        NSLog(@"CDVIonicKeyboard: WARNING!!: Keyboard plugin works better with WK");
-    }
-
-    if (isWK) {
-        [nc removeObserver:self.webView name:UIKeyboardWillHideNotification object:nil];
-        [nc removeObserver:self.webView name:UIKeyboardWillShowNotification object:nil];
-        [nc removeObserver:self.webView name:UIKeyboardWillChangeFrameNotification object:nil];
-        [nc removeObserver:self.webView name:UIKeyboardDidChangeFrameNotification object:nil];
-    }
 }
 
 -(void)statusBarDidChangeFrame:(NSNotification*)notification
@@ -328,13 +320,28 @@ static IMP WKOriginalImp;
     if (disableScroll == _disableScroll) {
         return;
     }
+
+    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+    
     if (disableScroll) {
         self.webView.scrollView.scrollEnabled = NO;
         self.webView.scrollView.delegate = self;
+        
+        if (self.isWK) {
+            [nc removeObserver:self.webView name:UIKeyboardWillHideNotification object:nil];
+            [nc removeObserver:self.webView name:UIKeyboardWillShowNotification object:nil];
+            [nc removeObserver:self.webView name:UIKeyboardWillChangeFrameNotification object:nil];
+            [nc removeObserver:self.webView name:UIKeyboardDidChangeFrameNotification object:nil];
+        }
     }
     else {
         self.webView.scrollView.scrollEnabled = YES;
         self.webView.scrollView.delegate = nil;
+        
+        if (self.isWK) {
+            [nc addObserver:self.webView selector:@selector(_keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+            [nc addObserver:self.webView selector:@selector(_keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+        }
     }
     _disableScroll = disableScroll;
 }
