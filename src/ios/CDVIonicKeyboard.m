@@ -325,7 +325,7 @@ static IMP WKOriginalImp;
     
     if (disableScroll) {
         self.webView.scrollView.scrollEnabled = NO;
-        self.webView.scrollView.delegate = self;
+        //self.webView.scrollView.delegate = self;
         
         if (self.isWK) {
             [nc removeObserver:self.webView name:UIKeyboardWillHideNotification object:nil];
